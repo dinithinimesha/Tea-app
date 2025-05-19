@@ -5,7 +5,7 @@ import { useCart } from '@/context/CartContext';
 import useSession from '@/hooks/useSession';
 import { supabase } from '@/lib/supabase';
 
-const API_URL = 'https://tea-app-web.vercel.app/api';
+const API_URL = 'https://tea-app-web-xi.vercel.app/api';
 
 const StripeCheckout = () => {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
