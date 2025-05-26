@@ -1,10 +1,19 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define the types for the context
+// Define the types
 interface CartItem {
   id: string;
   quantity: number;
+  price?: number;
+  discount?: number;
+  discountedTotal?: number;
   [key: string]: any;
 }
 
@@ -16,10 +25,10 @@ interface CartContextType {
   decrementQuantity: (id: string) => void;
   calculateTotal: () => number;
   clearCart: () => void;
-  clearCartstorage: () => void; // new
+  clearCartstorage: () => void;
+  getDetailedCartItems: () => CartItem[];
 }
 
-// Define the props for CartProvider
 interface CartProviderProps {
   children: ReactNode;
 }
@@ -29,7 +38,7 @@ const CartContext = createContext<CartContextType | null>(null);
 export const CartProvider = ({ children }: CartProviderProps) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  // Load cart items from AsyncStorage on mount
+  // Load cart items from AsyncStorage
   useEffect(() => {
     const loadCart = async () => {
       const storedCart = await AsyncStorage.getItem('cartItems');
@@ -38,7 +47,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     loadCart();
   }, []);
 
-  // Save cart items to AsyncStorage whenever they change
+  // Save cart items to AsyncStorage
   useEffect(() => {
     AsyncStorage.setItem('cartItems', JSON.stringify(cartItems));
   }, [cartItems]);
@@ -47,25 +56,15 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const addToCart = (product: CartItem) => {
     const existing = cartItems.find((item) => item.id === product.id);
     if (existing) {
-      setCartItems(cartItems.map((item) =>
-        item.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
+      setCartItems(
+        cartItems.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      );
     } else {
       setCartItems([...cartItems, { ...product, quantity: 1 }]);
-    }
-  };
-
-
-  // new
-
-  const clearCartstorage = async () => {
-    try {
-      await AsyncStorage.removeItem('cartItems'); // Remove from AsyncStorage
-      setCartItems([]);
-    } catch (error) {
-      console.error('Failed to clear cart:', error);
     }
   };
 
@@ -74,49 +73,82 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     setCartItems(cartItems.filter((item) => item.id !== id));
   };
 
-  // Increment quantity of an item in the cart
+  // Increment item quantity
   const incrementQuantity = (id: string) => {
-    setCartItems(cartItems.map(item =>
-      item.id === id
-        ? { ...item, quantity: item.quantity + 1 }
-        : item
-    ));
+    setCartItems(
+      cartItems.map((item) =>
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+      )
+    );
   };
 
-  // Decrement quantity of an item in the cart
+  // Decrement item quantity
   const decrementQuantity = (id: string) => {
-    setCartItems(cartItems.map(item =>
-      item.id === id && item.quantity > 1
-        ? { ...item, quantity: item.quantity - 1 }
-        : item
-    ));
+    setCartItems(
+      cartItems.map((item) =>
+        item.id === id && item.quantity > 1
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      )
+    );
   };
 
-
-
-
-  // Calculate the total price of items in the cart
-  const calculateTotal = (): number => {
-    return cartItems.reduce((total, item) => total + (item.quantity * (item.price || 0)), 0);
-  };
-
-  // Clear the cart
+  // Clear cart
   const clearCart = () => {
     setCartItems([]);
   };
 
-  return (
-    <CartContext.Provider value={{
-      cartItems,
-      addToCart,
-      removeFromCart,
-      incrementQuantity,
-      decrementQuantity,
-      calculateTotal,
-      clearCart,
-      clearCartstorage, // new
+  // Clear cart in storage
+  const clearCartstorage = async () => {
+    try {
+      await AsyncStorage.removeItem('cartItems');
+      setCartItems([]);
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+    }
+  };
 
-    }}>
+  // Get cart items with discounts applied
+  const getDetailedCartItems = (): CartItem[] => {
+    return cartItems.map((item) => {
+      const price = item.price || 0;
+      const quantity = item.quantity;
+      const isEligibleForDiscount = quantity >= 3;
+      const discountRate = isEligibleForDiscount ? 0.1 : 0;
+
+      const discount = price * quantity * discountRate;
+      const discountedTotal = price * quantity - discount;
+
+      return {
+        ...item,
+        discount,
+        discountedTotal,
+      };
+    });
+  };
+
+  // Calculate total from discounted totals
+  const calculateTotal = (): number => {
+    return getDetailedCartItems().reduce(
+      (total, item) => total + (item.discountedTotal || 0),
+      0
+    );
+  };
+
+  return (
+    <CartContext.Provider
+      value={{
+        cartItems,
+        addToCart,
+        removeFromCart,
+        incrementQuantity,
+        decrementQuantity,
+        calculateTotal,
+        clearCart,
+        clearCartstorage,
+        getDetailedCartItems,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

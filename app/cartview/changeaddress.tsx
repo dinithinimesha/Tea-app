@@ -102,7 +102,7 @@ export default function EditUserAccount() {
         title={loading ? 'Updating...' : 'Update Address'}
         onPress={updateProfile}
         disabled={loading}
-        buttonStyle={{ backgroundColor: '#4F46E5', borderRadius: 8 }}
+        buttonStyle={{ backgroundColor: '#16a34a', borderRadius: 8 }}
         containerStyle={{ marginTop: 16, marginBottom: 8 }}
       />
     </ScrollView>

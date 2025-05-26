@@ -14,51 +14,41 @@ import EmptyCart from './EmptyCart';
 import { Link } from 'expo-router';
 import useSession from '@/hooks/useSession';
 import { supabase } from '@/lib/supabase';
-import StripeCheckout from '../stripe/stripe'; // Import our new component
+import StripeCheckout from '../stripe/stripe';
 
-// Properly define the CartItem interface
 interface CartItem {
-  id: string; // Changed to string to match with context functions
+  id: string;
   product_name: string;
   price: number;
   quantity: number;
+  discount?: number;
+  discountedTotal?: number;
 }
 
 const CartScreen = () => {
   const navigation = useNavigation();
-  const { session, loading } = useSession(); // Fixed: using loading instead of sessionLoading
-  // Define session type
-  type UserSession = {
-    user: {
-      id: string;
-    };
-  };
+  const { session, loading } = useSession();
   const [address, setAddress] = useState('');
-  const { cartItems, removeFromCart, incrementQuantity, decrementQuantity, clearCart, calculateTotal } = useCart();
-  
-  // Cast cartItems to the proper type
-  const typedCartItems = cartItems as unknown as CartItem[];
+
+  const {
+    removeFromCart,
+    incrementQuantity,
+    decrementQuantity,
+    clearCart,
+    calculateTotal,
+    getDetailedCartItems
+  } = useCart();
+
+  const typedCartItems = getDetailedCartItems() as CartItem[];
   const total = calculateTotal();
 
   const fetchProfiles = async () => {
-    if (!session) {
-      console.error('No user session found');
-      return;
-    }
-    
-    // Cast session to the correct type
-    const typedSession = session as UserSession;
-    
-    if (!typedSession.user?.id) {
-      console.error('No user ID found in session');
-      return;
-    }
-
+    if (!session) return;
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', typedSession.user.id);
+        .eq('id', session.user.id);
 
       if (error) throw error;
       setAddress(data?.[0]?.address || '');
@@ -68,15 +58,13 @@ const CartScreen = () => {
   };
 
   useEffect(() => {
-    if (session && !loading) { // Fixed: using loading instead of sessionLoading
-      fetchProfiles();
-    }
-  }, [session, loading]); // Fixed: updated dependency
+    if (session && !loading) fetchProfiles();
+  }, [session, loading]);
 
-  const handleRemove = (id: string) => { // Changed parameter type to string
+  const handleRemove = (id: string) => {
     Alert.alert('Remove Item', 'Are you sure you want to remove this item?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', onPress: () => removeFromCart(id), style: 'destructive' }, // Now directly use id
+      { text: 'Remove', onPress: () => removeFromCart(id), style: 'destructive' },
     ]);
   };
 
@@ -91,7 +79,7 @@ const CartScreen = () => {
     <View className="flex-row items-center p-4 mb-3 bg-white shadow-sm rounded-xl">
       <View className="flex-1">
         <Text className="text-base font-semibold text-gray-800">{item.product_name}</Text>
-        <Text className="mt-1 text-sm text-gray-500">Rs.{item.price.toFixed(2)}</Text>
+        <Text className="mt-1 text-sm text-gray-500">Rs.{item.price.toFixed(2)} each</Text>
       </View>
       <View className="flex-row items-center mr-2">
         <TouchableOpacity
@@ -108,10 +96,24 @@ const CartScreen = () => {
           <Text className="text-lg font-medium text-gray-700">+</Text>
         </TouchableOpacity>
       </View>
-      <View className="flex-row items-center ml-2">
-        <Text className="mr-4 text-base font-semibold text-gray-800">
-          ${(item.price * item.quantity).toFixed(2)}
-        </Text>
+      <View className="items-end ml-2">
+        {item.discount && item.discount > 0 ? (
+          <>
+            <Text className="text-sm text-gray-400 line-through">
+              Rs.{(item.price * item.quantity).toFixed(2)}
+            </Text>
+            <Text className="text-sm text-green-700">
+              -Rs.{item.discount.toFixed(2)} (10% off)
+            </Text>
+            <Text className="text-base font-semibold text-gray-800">
+              Rs.{item.discountedTotal?.toFixed(2)}
+            </Text>
+          </>
+        ) : (
+          <Text className="text-base font-semibold text-gray-800">
+            Rs.{(item.price * item.quantity).toFixed(2)}
+          </Text>
+        )}
         <TouchableOpacity className="p-2" onPress={() => handleRemove(item.id)}>
           <Icon name="trash" size={18} color="#ff4d4f" />
         </TouchableOpacity>
@@ -123,9 +125,7 @@ const CartScreen = () => {
     <>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <View className="flex-row items-center justify-between px-5 py-4 mt-5 bg-white border-b border-gray-100">
-        <View className="flex-row items-center">
-          <Text className="text-xl font-bold text-gray-800">Shopping Cart</Text>
-        </View>
+        <Text className="text-xl font-bold text-gray-800">Shopping Cart</Text>
         {typedCartItems.length > 0 && (
           <TouchableOpacity className="px-3 py-1.5 bg-red-100 rounded-full" onPress={handleClear}>
             <Text className="text-sm font-medium text-red-700">Clear All</Text>
@@ -151,10 +151,9 @@ const CartScreen = () => {
                   <Text className="text-base font-medium text-green-800">Change</Text>
                 </Link>
               </View>
-
-              <View className="flex-row justify-between mb-2">
-                <Text className="text-base text-gray-600">{address || "No address set"}</Text>
-              </View>
+              <Text className="mb-2 text-base text-gray-600">
+                {address || "No address set"}
+              </Text>
 
               <View className="my-3 border-t border-gray-200" />
 
@@ -163,7 +162,6 @@ const CartScreen = () => {
                 <Text className="text-lg font-bold text-green-600">Rs.{total.toFixed(2)}</Text>
               </View>
 
-              {/* Replace the previous CheckoutScreen with our new StripeCheckout component */}
               <StripeCheckout />
             </View>
           </>

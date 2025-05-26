@@ -1,99 +1,111 @@
-import { useState } from 'react'
-import { supabase } from '../lib/supabase'
-import {
-  View,
-  Alert,
-  Text,
-  TouchableOpacity,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  TextInput,
-} from 'react-native'
-import { Link } from 'expo-router'
-import { useNavigation } from '@react-navigation/native'
+import React, { useState } from 'react'
+import { Alert, StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native'
+import { supabase } from '@/lib/supabase'
+import { Button, Input } from '@rneui/themed'
+import { useNavigation } from '@react-navigation/native';
+import { Link } from 'expo-router';
 
-export default function Auth() {
+
+export default function EmailForm() {
+  const navigation = useNavigation();
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const navigation = useNavigation()
 
-  const signInWithEmail = async () => {
-    try {
-      setLoading(true)
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert('Error signing in', error.message)
-      }
-    } finally {
-      setLoading(false)
-    }
+  async function signInWithEmail() {
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    })
+
+    if (error) Alert.alert(error.message)
+    setLoading(false)
   }
 
+ /* async function signUpWithEmail() {
+    setLoading(true)
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+    })
+
+    if (error) Alert.alert(error.message)
+    if (!session) Alert.alert('Please check your inbox for email verification!')
+    setLoading(false)
+  }*/
+
   return (
-    <SafeAreaView className="flex-1 bg-gray-100">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="justify-center flex-1"
-      >
-        <View className="items-center mb-8">
-          <Image
-            source={{ uri: "https://via.placeholder.com/150" }}
-            className="w-32 h-32"
-            resizeMode="contain"
-          />
-        </View>
+    <View style={styles.container}>
+      <Image
+        source={require('../assets/images/Logo.png')} // adjust the path
+        style={styles.image}
+      />
+      <Text className="mb-2 text-3xl font-bold text-center text-gray-800">Welcome Back</Text>
+      <Text className="mb-2 text-2xl font-bold text-center text-gray-800">Sign In</Text>
+      <View style={[styles.verticallySpaced, styles.mt20]}>
+      <Text className="mb-1 text-base font-medium text-gray-600">Email</Text>
+        <Input
+          className="h-12 px-4 text-lg border border-gray-300 rounded-lg"
+          onChangeText={(text) => setEmail(text)}
+          value={email}
+          placeholder="email@address.com"
+          autoCapitalize={'none'}
+        />
+      </View>
+      <View style={styles.verticallySpaced}>
+      <Text className="mb-1 text-base font-medium text-gray-600">Password</Text>
+        <Input
+          className="h-12 px-4 text-lg border border-gray-300 rounded-lg"
+          onChangeText={(text) => setPassword(text)}
+          value={password}
+          secureTextEntry={true}
+          placeholder="Password"
+          autoCapitalize={'none'}
+        />
+      </View>
 
-        <View className="p-6 mx-4 bg-white shadow-md rounded-xl">
-          <Text className="mb-2 text-3xl font-bold text-center text-gray-800">Welcome Back</Text>
-          <Text className="mb-2 text-2xl font-bold text-center text-gray-800">Sign In</Text>
-
-          <View className="mb-4">
-            <Text className="mb-1 text-base font-medium text-gray-600">Email</Text>
-            <TextInput
-              className="h-12 px-4 text-lg border border-gray-300 rounded-lg"
-              placeholder="email@address.com"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-            />
-          </View>
-
-          <View className="mb-2">
-            <Text className="mb-1 text-base font-medium text-gray-600">Password</Text>
-            <TextInput
-              className="h-12 px-4 text-lg border border-gray-300 rounded-lg"
-              placeholder="Password"
-              autoCapitalize="none"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-          </View>
-
-          <TouchableOpacity
+      <TouchableOpacity
             disabled={loading}
             onPress={signInWithEmail}
-            className={`mt-5 placeholder:rounded-lg py-3 ${loading ? 'bg-green-300' : 'bg-green-600'} items-center mb-4`}
+            className={`mt-5 placeholder:rounded-lg py-3 px-9 ${loading ? 'bg-green-300' : 'bg-green-600'} items-center mb-4`}
           >
             <Text className="text-lg font-semibold text-white">
-              {loading ? "Signing In..." : "Sign In"}
+              {loading ? "Signing ..." : "Sign In"}
             </Text>
           </TouchableOpacity>
-
-          <View className="flex-row items-center justify-center mt-4">
+      <View className="flex-row items-center justify-center mt-4">
             <Text className="text-base text-gray-500">Don't have an account?</Text>
             <Link href="/signup/signup" className="ml-1 text-base font-semibold text-green-600">
               Sign up
             </Link>
           </View>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   )
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 12,
+  },
+  verticallySpaced: {
+    paddingTop: 4,
+    paddingBottom: 4,
+    alignSelf: 'stretch',
+  },
+  mt20: {
+    marginTop: 20,
+  },
+  image: {
+    width: 100,
+    height: 100,
+    marginBottom: 20,
+    resizeMode: 'contain',
+  },
+})
